@@ -12,6 +12,7 @@ import hashlib
 import binascii
 import machine
 import time
+import gc
 
 global internal_tree
 
@@ -27,7 +28,7 @@ default_branch = 'master'
 
 # Don't remove ugit.py from the ignore_files unless you know what you are doing :D
 # Put the files you don't want deleted or updated here use '/filename.ext'
-ignore_files = ['/ugit.py']
+ignore_files = ['/ugit.py', '/m_logo.jpg', '/README.md']
 ignore = ignore_files
 ### -----------END OF USER VARIABLES ----------####
 
@@ -39,6 +40,7 @@ raw = f'https://raw.githubusercontent.com/{user}/{repository}/master/'
 
 
 def pull(f_path, raw_url):
+    gc.collect()
     print(f'pulling {f_path} from github')
     # files = os.listdir()
     headers = {'User-Agent': 'ugit-turfptax'}
@@ -59,6 +61,7 @@ def pull(f_path, raw_url):
 
 
 def pull_all(tree=call_trees_url, raw=raw, ignore=ignore):
+    gc.collect()
     os.chdir('/')
     tree = pull_git_tree()
     internal_tree = build_internal_tree()
@@ -131,11 +134,11 @@ def add_to_tree(dir_item):
 
 def get_hash(file):
     print(file)
-    o_file = open(file)
-    r_file = o_file.read()
-    sha1obj = hashlib.sha1(r_file)
-    hash = sha1obj.digest()
-    return (binascii.hexlify(hash))
+    with open(file, 'rb') as f:  # Open the file in binary mode
+        r_file = f.read()
+        sha1obj = hashlib.sha1(r_file)
+        hash = sha1obj.digest()
+        return binascii.hexlify(hash)
 
 
 def get_data_hash(data):
@@ -207,6 +210,7 @@ def remove_item(item, tree):
     for i in tree:
         if item not in i:
             culled.append(i)
+            gc.collect()
     return (culled)
 
 
@@ -227,3 +231,4 @@ def backup():
     backup = open('ugit.backup', 'w')
     backup.write(backup_text)
     backup.close()
+    gc.collect()
