@@ -1,7 +1,7 @@
 import micropython
 import machine
-# noinspection PyUnresolvedReferences
-from machine import Pin
+import ugit
+import board
 import ftptiny
 
 # noinspection PyArgumentList
@@ -10,15 +10,21 @@ micropython.alloc_emergency_exception_buf(100)
 
 print(str('Booting...'))
 
-import network
+try:
+    board.STA('iPhone', 'macos111')
+except OSError as error:
+    print(error)
 
-ap = network.WLAN(network.AP_IF)
-ap.config(essid="esp32")
-ap.active(True)
+ugit.pull_all()
 
-print('Connection successful')
-print(ap.ifconfig())
 
-ftp = ftptiny.FtpTiny()  # create one
-ftp.start()  # start an ftp thread
+#ap = network.WLAN(network.AP_IF)
+#ap.config(essid="esp32")
+#ap.active(True)
+
+#print('Connection successful')
+#print(ap.ifconfig())
+
+#ftp = ftptiny.FtpTiny()  # create one
+#ftp.start()  # start an ftp thread
 
