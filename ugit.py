@@ -23,7 +23,7 @@ user = 'silverlogix'
 repository = 'esp32update_test'
 token = ''
 # Change this variable to 'master' or any other name matching your default branch
-default_branch = 'main'
+default_branch = 'master'
 
 # Don't remove ugit.py from the ignore_files unless you know what you are doing :D
 # Put the files you don't want deleted or updated here use '/filename.ext'
