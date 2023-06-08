@@ -1,6 +1,6 @@
 from micropython import const
 import st7789
-import vga16 as font
+import vga8 as font
 import machine
 
 SCK = const(0x12)
@@ -227,4 +227,4 @@ def g_update(col=BLACK):
 def micrologo(col=BLACK):
     tft.fill(col)
     tft.jpg('m_logo.jpg', 0, -8, 1)
-    tft.text(font, " MICROPYTHON ", int(tft.width() / 2 - 105), int(tft.height() - 18), WHITE, 0)
+    tft.text(font, " MICROPYTHON ", int(tft.width() / 2 - 50), int(tft.height() - 18), WHITE, 0)

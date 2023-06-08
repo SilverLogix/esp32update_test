@@ -1,234 +1,58 @@
-# ugit
-# micropython OTA update from github
-# Created by TURFPTAx for the openmuscle project
-# Check out https://openmuscle.org for more info
-#
-# Pulls files and folders from open github repository
-
-import os
-import urequests  # noqa
-import json
-import hashlib
-import binascii
-import machine
-import time
-import gc
-
-global internal_tree
-
-#### -------------User Variables----------------####
-####
-# CHANGE TO YOUR REPOSITORY INFO
-# Repository must be public if no personal access token is supplied
-user = 'silverlogix'
-repository = 'esp32update_test'
-token = ''
-# Change this variable to 'master' or any other name matching your default branch
-default_branch = 'master'
-
-# Don't remove ugit.py from the ignore_files unless you know what you are doing :D
-# Put the files you don't want deleted or updated here use '/filename.ext'
-ignore_files = ['/ugit.py', '/m_logo.jpg', '/README.md']
-ignore = ignore_files
-### -----------END OF USER VARIABLES ----------####
-
-# Static URLS
-# GitHub uses 'main' instead of master for python repository trees
-giturl = 'https://github.com/{user}/{repository}'
-call_trees_url = f'https://api.github.com/repos/{user}/{repository}/git/trees/{default_branch}?recursive=1'
-raw = f'https://raw.githubusercontent.com/{user}/{repository}/master/'
+import urequests as requests
+import ujson as json
+import sys
 
 
-def pull(f_path, raw_url):
-    gc.collect()
-    print(f'pulling {f_path} from github')
-    # files = os.listdir()
-    headers = {'User-Agent': 'ugit-turfptax'}
-    # ^^^ Github Requires user-agent header otherwise 403
-    if len(token) > 0:
-        headers['authorization'] = "bearer %s" % token
-    r = urequests.get(raw_url, headers=headers)
-    try:
-        new_file = open(f_path, 'w')
-        new_file.write(r.content.decode('utf-8'))
-        new_file.close()
-    except:
-        print('decode fail try adding non-code files to .gitignore')
-        try:
-            new_file.close()
-        except:
-            print('tried to close new_file to save memory durring raw file decode')
+# Configuration
+GIT_API_URL = "https://api.github.com/repos/{owner}/{repo}"
+OWNER = "your_github_username"
+REPO = "your_repository_name"
 
+# Function to update a file
+def update_file(file_name, file_content):
+    # Perform the update operation on the file
+    # You can customize this function according to your specific requirements
+    # For example, you can write the content to a file on the Microcontroller
 
-def pull_all(tree=call_trees_url, raw=raw, ignore=ignore):
-    gc.collect()
-    os.chdir('/')
-    tree = pull_git_tree()
-    internal_tree = build_internal_tree()
-    internal_tree = remove_ignore(internal_tree)
-    print(' ignore removed ----------------------')
-    print(internal_tree)
-    log = []
-    # download and save all files
-    for i in tree['tree']:
-        if i['type'] == 'tree':
-            try:
-                os.mkdir(i['path'])
-            except:
-                print(f'failed to {i["path"]} dir may already exist')
-        elif i['path'] not in ignore:
-            try:
-                os.remove(i['path'])
-                log.append(f'{i["path"]} file removed from int mem')
-                internal_tree = remove_item(i['path'], internal_tree)
-            except:
-                log.append(f'{i["path"]} del failed from int mem')
-                print('failed to delete old file')
-            try:
-                pull(i['path'], raw + i['path'])
-                log.append(i['path'] + ' updated')
-            except:
-                log.append(i['path'] + ' failed to pull')
-    # delete files not in Github tree
-    if len(internal_tree) > 0:
-        print(internal_tree, ' leftover!')
-        for i in internal_tree:
-            os.remove(i)
-            log.append(i + ' removed from int mem')
-    logfile = open('ugit_log.py', 'w')
-    logfile.write(str(log))
-    logfile.close()
-    time.sleep(10)
-    print('resetting machine in 10: machine.reset()')
-    machine.reset()
-    # return check instead return with global
+    print("Updating file:", file_name)
+    print("Content:", file_content)
+    # Example: write the content to a file
+    with open(file_name, "w") as file:
+        file.write(file_content)
 
-def build_internal_tree():
-    global internal_tree
-    internal_tree = []
-    os.chdir('/')
-    for i in os.listdir():
-        add_to_tree(i)
-    return (internal_tree)
+# Function to check and update files on the Microcontroller from a Git repository
+def update_files_from_git():
+    # Prepare the URL for the Git API request
+    api_url = GIT_API_URL.format(owner=OWNER, repo=REPO)
 
+    # Send GET request to the Git API
+    response = requests.get(api_url)
+    if response.status_code == 200:
+        # Parse the JSON response
+        data = json.loads(response.text)
 
-def add_to_tree(dir_item):
-    global internal_tree
-    if is_directory(dir_item) and len(os.listdir(dir_item)) >= 1:
-        os.chdir(dir_item)
-        for i in os.listdir():
-            add_to_tree(i)
-        os.chdir('..')
+        # Process each item in the repository
+        for item in data["tree"]:
+            item_path = item["path"]
+
+            # Check if the item is a file
+            if item["type"] == "blob":
+                # Prepare the URL for the file's raw content
+                file_url = item["url"].replace("/blob/", "/raw/")
+
+                # Send GET request to the file's raw content URL
+                file_response = requests.get(file_url)
+                if file_response.status_code == 200:
+                    # Get the content of the file
+                    file_content = file_response.text
+
+                    # Update the file
+                    update_file(item_path, file_content)
+                else:
+                    print("Failed to retrieve file:", item_path)
+
     else:
-        print(dir_item)
-        if os.getcwd() != '/':
-            subfile_path = os.getcwd() + '/' + dir_item
-        else:
-            subfile_path = os.getcwd() + dir_item
-        try:
-            print(f'sub_path: {subfile_path}')
-            internal_tree.append([subfile_path, get_hash(subfile_path)])
-        except OSError:  # type: ignore # for removing the type error indicator :)
-            print(f'{dir_item} could not be added to tree')
+        print("Failed to retrieve repository information")
 
-
-def get_hash(file):
-    print(file)
-    with open(file, 'rb') as f:  # Open the file in binary mode
-        r_file = f.read()
-        sha1obj = hashlib.sha1(r_file)
-        hash = sha1obj.digest()
-        return binascii.hexlify(hash)
-
-
-def get_data_hash(data):
-    sha1obj = hashlib.sha1(data)
-    hash = sha1obj.digest()
-    return (binascii.hexlify(hash))
-
-
-def is_directory(file):
-    directory = False
-    try:
-        return (os.stat(file)[8] == 0)
-    except:
-        return directory
-
-
-def pull_git_tree(tree_url=call_trees_url, raw=raw):
-    headers = {'User-Agent': 'ugit-turfptax'}
-    # ^^^ Github Requires user-agent header otherwise 403
-    if len(token) > 0:
-        headers['authorization'] = "bearer %s" % token
-    r = urequests.get(tree_url, headers=headers)
-    data = json.loads(r.content.decode('utf-8'))
-    if 'tree' not in data:
-        print('\nDefault branch "main" not found. Set "default_branch" variable to your default branch.\n')
-        raise Exception(f'Default branch {default_branch} not found.')
-    tree = json.loads(r.content.decode('utf-8'))
-    return (tree)
-
-
-def parse_git_tree():
-    tree = pull_git_tree()
-    dirs = []
-    files = []
-    for i in tree['tree']:
-        if i['type'] == 'tree':
-            dirs.append(i['path'])
-        if i['type'] == 'blob':
-            files.append([i['path'], i['sha'], i['mode']])
-    print('dirs:', dirs)
-    print('files:', files)
-
-
-def check_ignore(tree=call_trees_url, raw=raw, ignore=ignore):
-    os.chdir('/')
-    tree = pull_git_tree()
-    check = []
-    # download and save all files
-    for i in tree['tree']:
-        if i['path'] not in ignore:
-            print(i['path'] + ' not in ignore')
-        if i['path'] in ignore:
-            print(i['path'] + ' is in ignore')
-
-
-def remove_ignore(internal_tree, ignore=ignore):
-    clean_tree = []
-    int_tree = []
-    for i in internal_tree:
-        int_tree.append(i[0])
-    for i in int_tree:
-        if i not in ignore:
-            clean_tree.append(i)
-    return (clean_tree)
-
-
-def remove_item(item, tree):
-    culled = []
-    for i in tree:
-        if item not in i:
-            culled.append(i)
-            gc.collect()
-    return (culled)
-
-
-def update():
-    print('updates ugit.py to newest version')
-    raw_url = 'https://raw.githubusercontent.com/turfptax/ugit/master/'
-    pull('ugit.py', raw_url + 'ugit.py')
-
-
-def backup():
-    int_tree = build_internal_tree()
-    backup_text = "ugit Backup Version 1.0\n\n"
-    for i in int_tree:
-        data = open(i[0], 'r')
-        backup_text += f'FN:SHA1{i[0]},{i[1]}\n'
-        backup_text += '---' + data.read() + '---\n'
-        data.close()
-    backup = open('ugit.backup', 'w')
-    backup.write(backup_text)
-    backup.close()
-    gc.collect()
+# Call the function to check and update files on the Microcontroller
+update_files_from_git()

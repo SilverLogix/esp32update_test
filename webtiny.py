@@ -41,8 +41,8 @@ class WebServer:
                 print("\nABOUT\n")
 
             elif command == '/?reset':
-                from machine import deepsleep
-                deepsleep(500)
+                from machine import reset
+                reset()
 
             # Build the response
             import html
