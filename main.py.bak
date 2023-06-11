@@ -37,7 +37,7 @@ if __name__ == "__main__":
     oled.set_backlight_intensity(64)
 
     oled.gwifi()
-    board.STA()
+    board.STA('NETGEAR90', 'curlyearth685')
     time.sleep_ms(1000)
     gn = board.get_npt()
     g.ntp = gn
