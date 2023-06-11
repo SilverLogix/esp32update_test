@@ -24,7 +24,7 @@ class WebServer:
 
     def handle_request(self, client_socket, server_socket):
         try:
-            request = client_socket.makefile("rwb", 0)  # Prepares to read and write data from the client
+            request = client_socket.makefile("rwb", 0)  # creates a file-like object for reading and writing data over a network socket
             request_lines = request.readline().decode().split("\r\n")  # Reads the lines of the request
 
             command = None  # The specific request made by the client

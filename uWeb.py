@@ -12,6 +12,7 @@ THREAD_TIMEOUT = 1  # Timeout value in seconds
 # Global vars to be used in the webpage:
 w_name = "weufwefiui"
 w_color = "blue"
+w_num = "42"
 
 
 def format_fstrings(content):
@@ -23,7 +24,11 @@ def format_fstrings(content):
             # Define allowed variables for f-strings evaluation
             # ----------------------------------------------- #
 
-            allowed_globals = {"name": w_name, "color": w_color}
+            allowed_globals = {
+                                "name": w_name,
+                                "color": w_color,
+                                "number": w_num
+                               }
 
             # ----------------------------------------------- #
             return str(eval(expr, allowed_globals))
@@ -111,11 +116,10 @@ class WebServer:
             _thread.exit()
 
     def start(self):
-        print("Web server started on", )
         self.server_socket = socket.socket()
         self.server_socket.bind(('0.0.0.0', 80))
         self.server_socket.listen(5)
-        print("Web Server started")
+        print("Web Server started\n")
 
         while True:
             client_socket, addr = self.server_socket.accept()  # noqa
