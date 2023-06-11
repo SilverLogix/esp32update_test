@@ -32,35 +32,31 @@ def tx(mac, data):
 
 
 def rx():
-    global is_rx_thread_running, e
 
-    while is_rx_thread_running:
-        # Add MAIN peers mac
-        peer = b'\x84\xcc\xa8\x61\x0a\x21'  # MAC address of peer's wifi interface
-        e.add_peer(peer)  # Sender's MAC registration
+    # Add MAIN peers mac
+    # TTGO MAC:  b'\x84\xcc\xa8\x61\x0a\x21'
+    peer = b'\x24\x0a\xc4\x58\xe3\x01'  # MAC address of peer's wifi interface
+    e.add_peer(peer)  # Sender's MAC registration
 
-        while True:
-            host, msg = e.recv()
-            if msg:  # wait for message
-                if msg == b'test':  # decode message and translate
-                    print("OMG Got message!\n")
-                elif msg == b'back':
-                    pass
-                elif msg == b'stop':
-                    pass
+    while True:
+        print("...")
+        host, msg = e.recv()
+        if msg:  # wait for message
+            if msg == b'test':  # decode message and translate
+                print("OMG Got message!\n")
+            elif msg == b'back':
+                pass
+            elif msg == b'stop':
+                pass
 
 
 def start_rx_thread():
-    global is_rx_thread_running
 
-    if not is_rx_thread_running:
-        is_rx_thread_running = True
-        _thread.stack_size(128)
-        _thread.start_new_thread(rx, ())
-        print("NOW Stack:", _thread.stack_size())
-        print("Rx thread started.")
-    else:
-        print("Rx thread is already running.")
+    _thread.stack_size(128)
+    _thread.start_new_thread(rx, ())
+    print("NOW Stack:", _thread.stack_size())
+    print("Rx thread started.")
+
 
 
 def stop_rx_thread():
